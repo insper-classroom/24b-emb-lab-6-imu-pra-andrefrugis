@@ -12,6 +12,7 @@
 
 #include <Fusion.h>
 
+
 const int MPU_ADDRESS = 0x68;
 const int I2C_SDA_GPIO = 4;
 const int I2C_SCL_GPIO = 5;
@@ -66,13 +67,33 @@ void mpu6050_task(void *p) {
     gpio_pull_up(I2C_SCL_GPIO);
 
     mpu6050_reset();
+    FusionAhrs ahrs;
+    FusionAhrsInitialise(&ahrs);
+
     int16_t acceleration[3], gyro[3], temp;
 
     while(1) {
         mpu6050_read_raw(acceleration, gyro, &temp);
-        printf("Acc. X = %d, Y = %d, Z = %d\n", acceleration[0], acceleration[1], acceleration[2]);
-        printf("Gyro. X = %d, Y = %d, Z = %d\n", gyro[0], gyro[1], gyro[2]);
-        printf("Temp. = %f\n", (temp / 340.0) + 36.53);
+
+        FusionVector gyroscope = {
+            .axis.x = gyro[0] / 131.0f,  // Gyroscope data to degrees/s
+            .axis.y = gyro[1] / 131.0f,
+            .axis.z = gyro[2] / 131.0f
+        };
+
+        FusionVector accelerometer = {
+            .axis.x = acceleration[0] / 16384.0f,  // Acceleration data to g
+            .axis.y = acceleration[1] / 16384.0f,
+            .axis.z = acceleration[2] / 16384.0f
+        };
+
+        FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, 0.01f); // Sample period of 10ms
+        FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+        printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+        
+        // printf("Acc. X = %d, Y = %d, Z = %d\n", acceleration[0], acceleration[1], acceleration[2]);
+        // printf("Gyro. X = %d, Y = %d, Z = %d\n", gyro[0], gyro[1], gyro[2]);
+        // printf("Temp. = %f\n", (temp / 340.0) + 36.53);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
