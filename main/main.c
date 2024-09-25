@@ -99,20 +99,20 @@ void mpu6050_task(void *p) {
         FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, 0.01f); // Sample period of 10ms
         FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
         euler.angle.roll = -euler.angle.roll;
-        euler.angle.roll = -euler.angle.yaw;
+        euler.angle.yaw = -euler.angle.yaw;
         //printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
         
         // printf("Acc. X = %d, Y = %d, Z = %d\n", acceleration[0], acceleration[1], acceleration[2]);
         // printf("Gyro. X = %d, Y = %d, Z = %d\n", gyro[0], gyro[1], gyro[2]);
         // printf("Temp. = %f\n", (temp / 340.0) + 36.53);
-
+            
         if(euler.angle.yaw > 10 || euler.angle.yaw < -10) {
             adc.axis = 0;
             adc.val = euler.angle.yaw;
             xQueueSend(xQueueAdc, &adc, portMAX_DELAY);
             vTaskDelay(pdMS_TO_TICKS(10));
         }
-        else if(euler.angle.roll > 10 || euler.angle.roll < -10) {
+        if(euler.angle.roll > 10 || euler.angle.roll < -10) {
             adc.axis = 1;
             adc.val = euler.angle.roll;
             xQueueSend(xQueueAdc, &adc, portMAX_DELAY);
@@ -150,6 +150,7 @@ void uart_setup() {
     gpio_set_function(0, GPIO_FUNC_UART);  // Pino 0 como TX
     gpio_set_function(1, GPIO_FUNC_UART);  // Pino 1 como RX
 }
+
 
 int main() {
     stdio_init_all();
